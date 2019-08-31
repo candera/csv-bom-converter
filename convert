@@ -1,0 +1,35 @@
+#!/usr/bin/env lumo -c clojurescript.csv/src/
+;; -*- mode: clojure -*-
+
+;; Usage: ./convert /tmp/bom.csv > /tmp/cutlist-importable.csv
+
+(require '[testdouble.cljs.csv :as csv])
+(require '[clojure.string :as str])
+
+(def fs (js/require "fs"))
+
+(let [[header & data] (csv/read-csv (.readFileSync fs (first *command-line-args*) "utf8"))
+      ;; _               (println (pr-str header))
+      indexed         (map-indexed (fn [i column] [column i]) header)
+      indexes         (for [[output match] [["Length" "Length"]
+                                            ["Width" "Width"]
+                                            ["Qty" "Quantity"]
+                                            ["Label" "name"]]]
+                        [output (->> indexed
+                                     (filter (fn [[column i]]
+                                               (re-matches (re-pattern (str ".*" match ".*")) column)))
+                                     first
+                                     second)])]
+  ;;  (println (pr-str indexes))
+  ;;  (println (str/join ", " (map first indexes)))
+  (println
+   (csv/write-csv
+    (concat
+     [(mapv first indexes)]
+     (for [row data]
+       (->> indexes
+            (mapv (fn [[column index]]
+                    (let [raw (nth row index)]
+                      (if (#{"Length" "Width"} column)
+                        (str/replace raw "-" " ")
+                        raw))))))))))

@@ -1,0 +1,12 @@
+* Cutlist Converter
+
+Converts the output of the excellent [[https://github.com/pettijohn/CSV-BOM-Plus][CSV BOM Plus]] plugin for Fusion
+360 into a format the equally excellent [[http://www.cutlistoptimizer.com][CutList Optimizer]] can use.
+
+Steps:
+
+- Export BOM from Fusion model
+- Run this script =./convert /tmp/bom.csv > /tmp/cutlist-importable.csv=
+- Import into CutList Optimizer
+- ...
+- Profit
