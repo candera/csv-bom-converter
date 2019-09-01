@@ -8,28 +8,48 @@
 
 (def fs (js/require "fs"))
 
+
+
 (let [[header & data] (csv/read-csv (.readFileSync fs (first *command-line-args*) "utf8"))
       ;; _               (println (pr-str header))
       indexed         (map-indexed (fn [i column] [column i]) header)
-      indexes         (for [[output match] [["Length" "Length"]
-                                            ["Width" "Width"]
-                                            ["Qty" "Quantity"]
-                                            ["Label" "name"]]]
+      indexes         (for [[output match] [[:length "length"]
+                                            [:width "width"]
+                                            [:quantity "quantity"]
+                                            [:height "height"]
+                                            [:name "name"]
+                                            [:material "material"]]]
                         [output (->> indexed
                                      (filter (fn [[column i]]
-                                               (re-matches (re-pattern (str ".*" match ".*")) column)))
+                                               (str/index-of (str/upper-case column)
+                                                             (str/upper-case match))))
                                      first
-                                     second)])]
-  ;;  (println (pr-str indexes))
+                                     second)])
+      mapped          (for [row data]
+                        (->> indexes
+                             (mapv (fn [[column index]]
+                                     [column (let [raw (nth row index)]
+                                               (if (#{:length :width :height} column)
+                                                 (str/replace raw "-" " ")
+                                                 raw))]))
+                             (into {})))
+      augmented       (map (fn [row]
+                             (assoc row
+                                    :dimensioned-material
+                                    (str (:material row) " " (:height row))))
+                           mapped)
+      output-cols     [["Length"   :length]
+                       ["Width"    :width]
+                       ["Qty"      :quantity]
+                       ["Label"    :name]
+                       ["Material" :dimensioned-material]]
+      column-data     (apply juxt (map second output-cols))]
+  ;; (println (pr-str indexes))
   ;;  (println (str/join ", " (map first indexes)))
+  #_(println (pr-str mapped))
   (println
    (csv/write-csv
     (concat
-     [(mapv first indexes)]
-     (for [row data]
-       (->> indexes
-            (mapv (fn [[column index]]
-                    (let [raw (nth row index)]
-                      (if (#{"Length" "Width"} column)
-                        (str/replace raw "-" " ")
-                        raw))))))))))
+     [(mapv first output-cols)]
+     (for [row augmented]
+       (column-data row))))))
